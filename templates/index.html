@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocabulary Analytics Dashboard</title>
+
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        background: linear-gradient(120deg, #89f7fe, #66a6ff);
+        min-height: 100vh; margin: 0; display: flex; justify-content: center; align-items: flex-start; padding: 20px 0;
+    }
+    .container {
+        background: #fff; width: 950px; border-radius: 16px; padding: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+    h2 { margin-top: 0; color: #1f2937; }
+    .section { margin-bottom: 32px; }
+    
+    input { padding: 10px 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 15px; outline: none; }
+    input:focus { border-color: #6366f1; }
+    button { padding: 10px 18px; border: none; border-radius: 8px; background: #4f46e5; color: white; font-size: 14px; cursor: pointer; font-weight: 500; }
+    button:hover { background: #4338ca; }
+    
+    .delete { background: #dc2626; } .delete:hover { background: #b91c1c; }
+    .edit { background: #16a34a; }
+    .graduate-btn { background: #f59e0b; color: white; } .graduate-btn:hover { background: #d97706; }
+    .revive-btn { background: #10b981; color: white; } .revive-btn:hover { background: #059669; }
+
+    /* ===== BẢNG TỪ VỰNG ===== */
+    .table-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .search-input { width: 250px; padding: 8px 12px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 14px; }
+    .pagination-controls { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 12px; }
+    .pagination-controls button { background: #f3f4f6; color: #374151; padding: 6px 14px; font-size: 13px; }
+    .page-info { font-size: 14px; color: #4b5563; font-weight: 500; }
+
+    .word-cell { display: flex; flex-direction: column; }
+    .ipa-text { font-size: 11px; color: #6b7280; font-family: monospace; margin-bottom: 2px; }
+    .en-text { font-weight: 600; color: #111827; }
+
+    /* ===== KHU VỰC LUYỆN TẬP ===== */
+    .quiz-box { background: #f9fafb; padding: 28px; border-radius: 14px; text-align: center; border: 2px dashed #e5e7eb; }
+    .quiz-control-row { display: flex; justify-content: center; gap: 24px; margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 14px; }
+    .control-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .control-label { font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .mode-btn { background: #e5e7eb; color: #4b5563; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 20px; transition: 0.2s; border: none; cursor: pointer; }
+    .mode-btn.active { background: #4f46e5; color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
+    
+    .quiz-word-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
+    .quiz-ipa { font-size: 14px; color: #4f46e5; font-family: monospace; min-height: 18px; }
+    .quiz-word { font-size: 28px; font-weight: 700; color: #111827; margin-top: 2px; }
+    
+    .letter-hint-box { font-family: monospace; font-size: 20px; color: #4f46e5; letter-spacing: 4px; margin: 10px 0 15px 0; font-weight: bold; min-height: 24px; }
+    .hint-btn { background: #6b7280; padding: 4px 10px; font-size: 11px; margin-bottom: 12px; border-radius: 6px; }
+    .hint-btn:hover { background: #4b5563; }
+
+    .desc-box { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 12px; margin: 15px auto; width: 85%; text-align: left; font-size: 13.5px; color: #1e40af; }
+
+    .quiz-input { width: 60%; font-size: 18px; text-align: center; margin-bottom: 12px; }
+    .mcq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 80%; margin: 0 auto 10px auto; }
+    .mcq-btn { background: #fff; border: 2px solid #6366f1; color: #4f46e5; padding: 14px; font-size: 16px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+    .mcq-btn:hover { background: #e0e7ff; }
+
+    .result { margin-top: 14px; font-size: 18px; font-weight: 600; min-height: 24px; margin-bottom: 10px; }
+    .correct { color: #16a34a; } .wrong { color: #dc2626; }
+    .hint { margin-top: 12px; color: #6b7280; font-size: 13px; font-style: italic; transition: all 0.3s; }
+    
+    .stage-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
+    .stage-1 { background: #dbeafe; color: #1e3a8a; }
+    .stage-2 { background: #fce7f3; color: #9d174d; }
+    .stage-graduated { background: #fef3c7; color: #92400e; }
+
+    /* ===== NÚT ĐÁNH GIÁ SM-2 ===== */
+    .sm2-btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; font-size: 14px; }
+    .sm2-again { background: #dc2626; } .sm2-again:hover { background: #b91c1c; }
+    .sm2-hard { background: #ea580c; } .sm2-hard:hover { background: #c2410c; }
+    .sm2-good { background: #16a34a; } .sm2-good:hover { background: #15803d; }
+    .sm2-easy { background: #2563eb; } .sm2-easy:hover { background: #1d4ed8; }
+</style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="section">
+        <form method="post">
+            <input name="word" placeholder="Nhập từ tiếng Anh..." required autocomplete="off" style="width: 300px;">
+            <button type="submit">Thêm vào kho</button>
+        </form>
+    </div>
+
+    <div class="section">
+        <div class="table-header-actions">
+            <h2>🌱 Danh sách từ đang học ({{ vocab|length }} từ)</h2>
+            <input id="search-box" class="search-input" placeholder="🔍 Tìm kiếm từ..." oninput="onSearchChange()">
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>English (Kèm IPA)</th>
+                    <th>Vietnamese</th>
+                    <th>✔</th> <th>❌</th>
+                    <th style="width: 140px;">Hành động</th>
+                </tr>
+            </thead>
+            <tbody id="vocab-table-body">
+                {% for w in vocab %}
+                <tr class="vocab-row" data-en="{{ w.en }}" data-vi="{{ w.vi }}">
+                    <td>
+                        <div class="word-cell">
+                            <span class="ipa-text">{% if w.ipa %}{{ w.ipa }}{% else %}/.../{% endif %}</span>
+                            <span class="en-text">{{ w.en }}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <form action="/edit/{{ w.id }}" method="post" style="display:flex; gap: 4px;">
+                            <input name="vi" value="{{ w.vi }}" style="padding: 4px 8px; flex: 1;">
+                            <button class="edit" style="padding: 4px 8px;">✏️</button>
+                        </form>
+                    </td>
+                    <td>{{ w.correct }}</td>
+                    <td>{{ w.wrong }}</td>
+                    <td>
+                        <form action="/graduate/{{ w.id }}" method="post" style="display:inline;">
+                            <button class="graduate-btn" type="submit" style="padding: 6px 10px;" title="Tốt nghiệp từ này">🎓</button>
+                        </form>
+                        <form action="/delete/{{ w.id }}" method="post" style="display:inline;">
+                            <button class="delete" type="submit" style="padding: 6px 10px;" title="Xóa vĩnh viễn">❌</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="pagination-controls">
+            <button type="button" onclick="prevPage()">Trước</button>
+            <span id="page-info" class="page-info">Trang 1 / 1</span>
+            <button type="button" onclick="nextPage()">Sau</button>
+        </div>
+    </div>
+
+    <div class="section quiz-box">
+        <h2>Luyện tập thông minh</h2>
+        
+        <div class="quiz-control-row">
+            <div class="control-group">
+                <span class="control-label">Bộ từ ôn tập</span>
+                <div>
+                    <button id="mode-active" class="mode-btn active" onclick="switchQuizMode('active')">🌱 Từ đang học</button>
+                    <button id="mode-graduated" class="mode-btn" onclick="switchQuizMode('graduated')">🎓 Từ đã tốt nghiệp</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Hướng kiểm tra</span>
+                <div>
+                    <button id="dir-envi" class="mode-btn active" onclick="switchDirection('en-vi')">🇬🇧 ➔ 🇻🇳 Anh - Việt</button>
+                    <button id="dir-vien" class="mode-btn" onclick="switchDirection('vi-en')">🇻🇳 ➔ 🇬🇧 Việt - Anh</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="quiz-word-container">
+            <div id="quiz-stage" class="stage-badge"></div>
+            <div id="quiz-ipa" class="quiz-ipa"></div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 2px;">
+                <div class="quiz-word" id="word">---</div>
+                <div id="quiz-synonyms" style="display: none; font-size: 14px; color: #059669; background: #d1fae5; padding: 4px 10px; border-radius: 8px; font-weight: bold; border: 1px dashed #059669;" title="Tự động tra API"></div>
+            </div>
+        </div>
+
+        <div id="desc-area" class="desc-box" style="display: none;">
+            <b>Mô tả (Context):</b> <span id="desc-definition"></span><br>
+            <span id="desc-example-row" style="font-style: italic; color: #4b5563; display:block; margin-top:4px;">
+                Ví dụ: <span id="desc-example"></span>
+            </span>
+        </div>
+
+        <div id="hint-char-container" style="display: none;">
+            <div id="letter-hint-area" class="letter-hint-box"></div>
+            <button type="button" class="hint-btn" onclick="triggerLetterHint()">💡 Gợi ý chữ cái</button>
+        </div>
+
+        <div id="quiz-typing-area" style="display: none;">
+            <input id="answer" class="quiz-input" placeholder="Nhập đáp án của bạn..." autocomplete="off">
+            <br>
+            <button class="quiz-btn" type="button" onclick="handleCheck()">Kiểm tra</button>
+        </div>
+
+        <div id="quiz-mcq-area" style="display: none;">
+            <div class="mcq-grid" id="mcq-options"></div>
+        </div>
+
+        <div id="sm2-rating-area" style="display: none; margin-top: 20px;">
+            <p style="font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 12px;">Đánh giá mức độ ghi nhớ của bạn:</p>
+            <div style="display: flex; justify-content: center; gap: 12px;">
+                <button class="sm2-btn sm2-again" onclick="submitSM2(0)">Học lại</button>
+                <button class="sm2-btn sm2-hard" onclick="submitSM2(1)">Khó</button>
+                <button class="sm2-btn sm2-good" onclick="submitSM2(2)">Bình thường</button>
+                <button class="sm2-btn sm2-easy" onclick="submitSM2(3)">Dễ</button>
+            </div>
+        </div>
+
+        <div class="result" id="result"></div>
+        <div class="hint" id="quiz-hint"></div>
+    </div>
+
+    <div class="section" style="margin-top: 50px; border-top: 2px solid #e5e7eb; padding-top: 20px;">
+        <h2>🎓 Kho từ vựng đã tốt nghiệp ({{ graduated|length }} từ)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>English</th>
+                    <th>Vietnamese</th>
+                    <th>Lịch sử Đúng/Sai</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for w in graduated %}
+                <tr style="background-color: #fafafa;">
+                    <td><b>{{ w.en }}</b> <span style="color:#6b7280; font-size:12px;">{{ w.ipa }}</span></td>
+                    <td>{{ w.vi }}</td>
+                    <td><span style="color: #16a34a;">✔ {{ w.correct }}</span> - <span style="color: #dc2626;">❌ {{ w.wrong }}</span></td>
+                    <td>
+                        <form action="/revive/{{ w.id }}" method="post" style="display:inline;">
+                            <button class="revive-btn" type="submit" style="padding: 6px 12px; font-size: 12px;">↩️ Học lại</button>
+                        </form>
+                        <form action="/delete/{{ w.id }}" method="post" style="display:inline;">
+                            <button class="delete" type="submit" style="padding: 6px 10px; font-size: 12px;">❌</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not graduated %}
+                <tr><td colspan="4" style="text-align: center; color: #9ca3af; padding: 20px;">Chưa có từ nào tốt nghiệp.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+    function removeAccents(str) {
+        if (!str) return "";
+        return String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
+    }
+    
+    function shuffleArray(array) { return array.sort(() => Math.random() - 0.5); }
+
+    const quizzes = {{ quiz_data | tojson }};
+    let used = [];
+    let current = null;
+    let quizMode = 'active';      
+    let quizDirection = 'en-vi';   
+    let hintCount = 0;
+    let wordStartTime = 0;
+
+    const wordEl = document.getElementById("word");
+    const ipaEl = document.getElementById("quiz-ipa");
+    const stageEl = document.getElementById("quiz-stage");
+    const hintEl = document.getElementById("quiz-hint");
+    const typingArea = document.getElementById("quiz-typing-area");
+    const typingInput = document.getElementById("answer");
+    const mcqArea = document.getElementById("quiz-mcq-area");
+    const mcqOptions = document.getElementById("mcq-options");
+    const sm2Area = document.getElementById("sm2-rating-area");
+    const result = document.getElementById("result");
+    
+    const descArea = document.getElementById("desc-area");
+    const descDef = document.getElementById("desc-definition");
+    const descEx = document.getElementById("desc-example");
+    const descExRow = document.getElementById("desc-example-row");
+    const hintCharContainer = document.getElementById("hint-char-container");
+    const synEl = document.getElementById("quiz-synonyms");
+
+    function switchQuizMode(mode) {
+        if(quizMode === mode) return;
+        quizMode = mode; used = [];
+        document.getElementById("mode-active").classList.toggle("active", mode === 'active');
+        document.getElementById("mode-graduated").classList.toggle("active", mode === 'graduated');
+        nextWord();
+    }
+
+    function switchDirection(dir) {
+        if(quizDirection === dir) return;
+        quizDirection = dir; used = [];
+        document.getElementById("dir-envi").classList.toggle("active", dir === 'en-vi');
+        document.getElementById("dir-vien").classList.toggle("active", dir === 'vi-en');
+        nextWord();
+    }
+
+    function updateLetterHintDisplay() {
+        let target = (quizDirection === 'en-vi') ? current.vi : current.en;
+        let targetFirst = String(target).split(/[,;|]/)[0].trim(); 
+        
+        let displayStr = "";
+        for(let i = 0; i < targetFirst.length; i++) {
+            let char = targetFirst[i];
+            if(char === " ") {
+                displayStr += "&nbsp;&nbsp;";
+            } else if(i < hintCount) {
+                displayStr += char;
+            } else {
+                displayStr += "_";
+            }
+            displayStr += " ";
+        }
+        document.getElementById("letter-hint-area").innerHTML = displayStr;
+    }
+
+    function triggerLetterHint() {
+        let target = (quizDirection === 'en-vi') ? current.vi : current.en;
+        let targetFirst = String(target).split(/[,;|]/)[0].trim();
+        if(hintCount < targetFirst.length) {
+            hintCount++;
+            updateLetterHintDisplay();
+        }
+    }
+
+    function nextWord() {
+        hintCount = 0; 
+        sm2Area.style.display = "none"; // Ẩn nút đánh giá khi qua từ mới
+        result.innerText = "";
+        hintEl.innerHTML = "";
+        hintEl.style.color = "#6b7280";
+        hintEl.style.fontWeight = "normal";
+
+        if (synEl) synEl.style.display = "none";
+
+        let targetTarget = (quizMode === 'active') ? 0 : 1;
+        const remaining = quizzes.filter(q => !used.includes(q.id) && q.is_graduated === targetTarget);
+
+        if (remaining.length === 0) {
+            wordEl.innerText = "🎉 Đã hoàn thành bộ từ này!";
+            ipaEl.innerText = ""; stageEl.style.display = "none";
+            typingArea.style.display = "none"; mcqArea.style.display = "none";
+            descArea.style.display = "none"; hintCharContainer.style.display = "none";
+            return;
+        }
+
+        // Loại bỏ công thức cũ (wrong * 2 - correct). Chuyển sang random thuần hoặc sẽ xử lý lọc ngay hạn ở Backend.
+        current = remaining[Math.floor(Math.random() * remaining.length)];
+        
+        if (quizDirection === 'en-vi') {
+            wordEl.innerText = current.en;
+            ipaEl.innerText = current.ipa ? current.ipa : "";
+            
+            fetch(`https://api.datamuse.com/words?rel_syn=${current.en}&max=3`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        let syns = data.map(d => d.word).join(", ");
+                        if (synEl) {
+                            synEl.innerText = "≈ " + syns;
+                            synEl.style.display = "inline-block";
+                        }
+                    }
+                }).catch(err => console.log("Lỗi tra API:", err));
+        } else {
+            wordEl.innerText = current.vi;
+            ipaEl.innerText = "";
+            if (synEl) synEl.style.display = "none"; 
+        }
+
+        if(current.definition && current.definition !== "No description available.") {
+            descArea.style.display = "block";
+            descDef.innerText = current.definition;
+            if(current.example) {
+                descExRow.style.display = "block";
+                descEx.innerText = current.example;
+            } else {
+                descExRow.style.display = "none";
+            }
+        } else {
+            descArea.style.display = "none";
+        }
+
+        stageEl.style.display = "inline-block";
+
+        if (quizMode === 'graduated') {
+            stageEl.innerText = "🎓 Ôn tập nhớ lâu";
+            stageEl.className = "stage-badge stage-graduated";
+            mcqArea.style.display = "none"; typingArea.style.display = "block";
+            hintCharContainer.style.display = "block"; updateLetterHintDisplay();
+            typingInput.value = ""; typingInput.focus();
+        } else {
+            if (current.correct >= 3 || quizzes.filter(q => q.is_graduated === 0).length < 4) {
+                stageEl.innerText = "⭐ Level 2: Gõ chữ";
+                stageEl.className = "stage-badge stage-2";
+                mcqArea.style.display = "none"; typingArea.style.display = "block";
+                hintCharContainer.style.display = "block"; updateLetterHintDisplay();
+                typingInput.value = ""; typingInput.focus();
+            } else {
+                stageEl.innerText = "🌱 Level 1: Trắc nghiệm";
+                stageEl.className = "stage-badge stage-1";
+                typingArea.style.display = "none"; mcqArea.style.display = "block";
+                hintCharContainer.style.display = "none";
+
+                let wrongOptions, correctTarget;
+                if (quizDirection === 'en-vi') {
+                    correctTarget = current.vi;
+                    wrongOptions = quizzes.filter(q => q.id !== current.id && q.is_graduated === 0).map(q => q.vi);
+                } else {
+                    correctTarget = current.en;
+                    wrongOptions = quizzes.filter(q => q.id !== current.id && q.is_graduated === 0).map(q => q.en);
+                }
+                
+                wrongOptions = shuffleArray(wrongOptions).slice(0, 3);
+                let allOptions = shuffleArray([correctTarget, ...wrongOptions]);
+                
+                mcqOptions.innerHTML = "";
+                allOptions.forEach(opt => {
+                    const btn = document.createElement("button");
+                    btn.className = "mcq-btn"; btn.innerText = opt;
+                    btn.onclick = () => checkAnswer(opt);
+                    mcqOptions.appendChild(btn);
+                });
+            }
+        }
+        wordStartTime = Date.now();
+    }
+
+    function handleCheck() { checkAnswer(typingInput.value); }
+
+    async function checkAnswer(userAnswer) {
+        if (!userAnswer || !userAnswer.trim()) { 
+            result.innerText = "⚠️ Nhập đáp án trước đã ông ơi!"; 
+            return; 
+        }
+        userAnswer = userAnswer.trim();
+
+        const buttons = mcqOptions.querySelectorAll("button");
+        buttons.forEach(b => b.disabled = true);
+
+        let targetAnswer = (quizDirection === 'en-vi') ? current.vi : current.en;
+        targetAnswer = String(targetAnswer || "");
+
+        let responseTime = (Date.now() - wordStartTime) / 1000;
+        let isTypingMode = (quizMode === 'graduated') || (current.correct >= 3 || quizzes.filter(q => q.is_graduated === 0).length < 4);
+        let typedInput = isTypingMode ? userAnswer : ""; 
+
+        let userClean = removeAccents(userAnswer);
+        let rawTargetClean = removeAccents(targetAnswer);
+        let correctOptions = targetAnswer.split(/[,;|]/).map(x => removeAccents(x.trim()));
+
+        let isLocalCorrect = correctOptions.includes(userClean) || userClean === rawTargetClean;
+        const localQuiz = quizzes.find(q => q.id === current.id);
+
+        if (isLocalCorrect) {
+            result.innerText = "✅ Chuẩn — " + targetAnswer; 
+            result.className = "result correct";
+            if (localQuiz) localQuiz.correct++; 
+        } else {
+            result.innerText = "❌ Sai rồi — Đúng ra là: ";
+            let boldTag = document.createElement("b");
+            boldTag.innerText = targetAnswer;
+            result.appendChild(boldTag);
+            result.className = "result wrong";
+            if (localQuiz) localQuiz.wrong++;
+        }
+
+        // Ẩn khu vực nhập/chọn, hiển thị khu vực chọn nút SM-2 để đánh giá
+        typingArea.style.display = "none";
+        mcqArea.style.display = "none";
+        sm2Area.style.display = "block";
+
+        try {
+            // Giữ lại fetch answer để lưu time/slip nếu Backend cần
+            let res = await fetch(`/answer/${current.id}`, {
+                method: "POST",
+                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                body: `answer=${encodeURIComponent(userAnswer)}&user_input=${encodeURIComponent(typedInput)}&correct=${encodeURIComponent(targetAnswer)}&time=${responseTime}`
+            });
+            let data = await res.json();
+            
+            // Xóa triệt để chữ DB của ông, chỉ hiện API (nếu có)
+            if (data.api_synonyms) {
+                hintEl.innerHTML = `💡 Gợi ý thêm: ${data.api_synonyms}`;
+                hintEl.style.color = "#059669"; 
+                hintEl.style.fontWeight = "bold";
+            }
+        } catch (e) {
+            console.error("Lỗi gửi/lấy kết quả từ Server:", e);
+        }
+    }
+
+    // HÀM GỬI RATING SM-2 VỀ BACKEND 
+    async function submitSM2(ratingScore) {
+        try {
+            await fetch(`/sm2_rate/${current.id}`, {
+                method: "POST",
+                headers: {"Content-Type": "application/x-www-form-urlencoded"},
+                body: `rating=${ratingScore}`
+            });
+        } catch (e) {
+            console.error("Lỗi gửi đánh giá SM-2:", e);
+        }
+        
+        used.push(current.id); // Đánh dấu đã học xong trong phiên này
+        nextWord(); // Chuyển sang từ tiếp theo
+    }
+
+    typingInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); handleCheck(); } });
+
+    // --- LOGIC PHÂN TRANG & TÌM KIẾM ---
+    let currentPage = 1; const rowsPerPage = 5;
+    function updateTable() {
+        const searchQuery = removeAccents(document.getElementById("search-box").value);
+        const rows = Array.from(document.querySelectorAll(".vocab-row"));
+        let filteredRows = rows.filter(row => {
+            const enText = removeAccents(row.getAttribute("data-en") || "");
+            const viText = removeAccents(row.getAttribute("data-vi") || "");
+            return enText.includes(searchQuery) || viText.includes(searchQuery);
+        });
+        rows.forEach(r => r.style.display = "none");
+        const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+        const start = (currentPage - 1) * rowsPerPage;
+        filteredRows.slice(start, start + rowsPerPage).forEach(r => r.style.display = "");
+        document.getElementById("page-info").innerText = `Trang ${currentPage} / ${totalPages}`;
+    }
+    function onSearchChange() { currentPage = 1; updateTable(); }
+    function prevPage() { if (currentPage > 1) { currentPage--; updateTable(); } }
+    function nextPage() {
+        const searchQuery = removeAccents(document.getElementById("search-box").value);
+        const rows = Array.from(document.querySelectorAll(".vocab-row"));
+        let count = rows.filter(row => removeAccents(row.getAttribute("data-en")).includes(searchQuery) || removeAccents(row.getAttribute("data-vi")).includes(searchQuery)).length;
+        if (currentPage < (Math.ceil(count / rowsPerPage) || 1)) { currentPage++; updateTable(); }
+    }
+
+    updateTable();
+    nextWord();
+</script>
+</body>
+</html>
