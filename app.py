@@ -5,7 +5,6 @@ import eng_to_ipa
 import os
 import pandas as pd
 
-# Thư viện phục vụ Data Analyst & Machine Learning
 import matplotlib
 matplotlib.use('Agg') # Cấu hình để Flask không bị crash khi vẽ biểu đồ ngầm
 import matplotlib.pyplot as plt
@@ -16,7 +15,6 @@ from sklearn.metrics import accuracy_score
 
 app = Flask(__name__)
 
-# ==================== PHẦN DEV (XỬ LÝ NGHIỆP VỤ APP) ====================
 def clean_input(text):
     if not text: return ""
     return re.sub(r'\s+', ' ', text).strip()
@@ -31,7 +29,6 @@ def get_db():
     conn = sqlite3.connect("vocab.db")
     conn.row_factory = sqlite3.Row
     
-    # Đã sửa lại DEFAULT của next_review thành NULL
     conn.execute("""
         CREATE TABLE IF NOT EXISTS vocab (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,7 +58,6 @@ def get_db():
     try: conn.execute("ALTER TABLE vocab ADD COLUMN repetitions INTEGER DEFAULT 0")
     except sqlite3.OperationalError: pass
     
-    # SỬA Ở ĐÂY: SQLite không cho dùng hàm động (datetime) trong DEFAULT của ALTER TABLE, dùng NULL là an toàn nhất.
     try: conn.execute("ALTER TABLE vocab ADD COLUMN next_review TEXT DEFAULT NULL")
     except sqlite3.OperationalError: pass
     
@@ -142,7 +138,7 @@ def index():
             )
             conn.commit()
 
-    # THAY ĐỔI LOGIC: Chỉ lấy những từ chưa tốt nghiệp VÀ đã đến hạn ôn tập (hoặc từ mới thêm)
+    # Chỉ lấy những từ chưa tốt nghiệp
     cur.execute("""
         SELECT * FROM vocab 
         WHERE is_graduated = 0 
@@ -153,7 +149,6 @@ def index():
     cur.execute("SELECT * FROM vocab WHERE is_graduated = 1")
     graduated = cur.fetchall()
     
-    # quiz_data cũng lọc tương tự để khi bấm F5 list Quiz không chứa từ chưa đến hạn
     cur.execute("""
         SELECT * FROM vocab 
         WHERE is_graduated = 0 
@@ -242,7 +237,6 @@ def answer(id):
         "api_synonyms": api_synonyms
     }), 200
 
-# THAY ĐỔI LOGIC: Cập nhật ngày tiếp tục xuất hiện dựa vào số ngày của interval
 @app.route("/sm2_rate/<int:id>", methods=["POST"])
 def sm2_rate(id):
     try:

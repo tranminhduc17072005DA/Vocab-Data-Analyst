@@ -12,9 +12,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-# ==========================================
 # 1. PAGE CONFIG & UI SETUP
-# ==========================================
 st.set_page_config(page_title="Phân tích Từ vựng", page_icon="", layout="wide")
 
 with st.sidebar:
@@ -28,9 +26,7 @@ with st.sidebar:
     - **NLP & Clustering:** Trích xuất đặc trưng văn bản và phân cụm dữ liệu bằng thuật toán K-Means.
     """)
 
-# ==========================================
 # 2. ADVANCED ETL PIPELINE
-# ==========================================
 @st.cache_data(ttl=10)
 def load_and_transform_data():
     try:
@@ -65,7 +61,6 @@ def load_and_transform_data():
 
     if 'user_input' in df_logs.columns:
         df_logs['similarity'] = df_logs.apply(lambda r: get_similarity(r['vi'], r['user_input']), axis=1)
-        # Thiết lập ngưỡng Similarity 0.7 để phân loại lỗi thao tác (Slips) và lỗi nhận thức (Lapses)
         df_logs['is_typo'] = np.where((df_logs['is_correct'] == 0) & (df_logs['similarity'] >= 0.7), 1, 0)
     else:
         df_logs['is_typo'] = 0
@@ -215,7 +210,6 @@ with tab3:
     if len(ml_df) < 10:
         st.warning("Yêu cầu kích thước mẫu tối thiểu (n ≥ 10) để tiến hành huấn luyện mô hình.")
     else:
-        # ĐÃ SỬA DATA LEAKAGE: Loại bỏ memory_gaps, dùng typos để đo mức độ thao tác vội
         X = ml_df[['word_length', 'total_attempts', 'typos', 'days_since_last_review']]
         y = (ml_df['adjusted_error_rate'] > 0.3).astype(int)
         
@@ -231,7 +225,6 @@ with tab3:
                 st.metric("Độ chính xác của Mô hình (Accuracy)", f"{acc*100:.1f}%")
                 
             with col_ml2:
-                # ĐÃ CẬP NHẬT TÊN ĐẶC TRƯNG TƯƠNG ỨNG
                 importances = pd.DataFrame({'Feature': ['Độ dài từ', 'Tổng lượt tương tác', 'Lỗi thao tác (Slips)', 'Khoảng cách thời gian'], 
                                             'Importance': model.feature_importances_}).sort_values('Importance')
                 fig_imp = px.bar(importances, x='Importance', y='Feature', orientation='h', title="Mức độ đóng góp của các đặc trưng (Feature Importance)")

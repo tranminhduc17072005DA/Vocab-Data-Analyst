@@ -2,7 +2,7 @@ import sqlite3
 
 def upgrade_database():
     try:
-        # Kết nối tới database hiện tại của ông
+        # Kết nối tới database hiện tại
         conn = sqlite3.connect('vocab.db')
         cursor = conn.cursor()
         
