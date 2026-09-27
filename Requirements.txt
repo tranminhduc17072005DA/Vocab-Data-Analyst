@@ -1,0 +1,11 @@
+flask
+requests
+eng_to_ipa
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+nltk
+streamlit
+plotly

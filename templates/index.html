@@ -4,100 +4,237 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vocabulary Analytics Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
+    /* ============================================================
+       TOKENS — "Sổ tay từ vựng" (vocabulary notebook / index card)
+       Giấy ấm + mực, thay cho gradient xanh kiểu SaaS chung chung
+       ============================================================ */
+    :root {
+        --paper:      #EDE7D7;   /* nền trang, như mặt bàn học */
+        --card:       #FFFCF4;   /* nền thẻ, như giấy trắng ngà */
+        --card-line:  #E4DCC6;   /* viền/kẻ dòng thẻ */
+        --ink:        #2A2420;   /* chữ chính, mực đen ấm */
+        --ink-soft:   #766B5C;   /* chữ phụ */
+        --ink-faint:  #A79C89;   /* chữ mờ, placeholder */
+        --pen-blue:   #2F5560;   /* hành động chính */
+        --pen-blue-d: #203C45;  
+        --pen-blue-tint: #DCE9EA;
+        --red-pen:    #B23B3B;   /* xoá / sai / học lại */
+        --red-pen-d:  #8F2E2E;
+        --red-pen-tint: #F3DEDA;
+        --sage:       #4C7A52;   /* đúng / tốt nghiệp / dễ */
+        --sage-d:     #3A5F40;
+        --sage-tint:  #DEE9DD;
+        --ochre:      #B07A24;  /* khó / cảnh báo */
+        --ochre-d:    #8F631C;
+        --ochre-tint: #F1E3CB;
+        --shadow: 0 24px 48px -20px rgba(42, 36, 32, 0.35);
+        --radius-card: 4px;
+    }
+
     * { box-sizing: border-box; }
     body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        background: linear-gradient(120deg, #89f7fe, #66a6ff);
-        min-height: 100vh; margin: 0; display: flex; justify-content: center; align-items: flex-start; padding: 20px 0;
+        font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+        background: var(--paper);
+        background-image:
+            radial-gradient(circle at 0% 0%, rgba(255,255,255,0.5), transparent 40%),
+            repeating-linear-gradient(rgba(42,36,32,0.025) 0 1px, transparent 1px 32px);
+        color: var(--ink);
+        min-height: 100vh; margin: 0; display: flex; justify-content: center; align-items: flex-start; padding: 48px 20px 80px;
+        -webkit-font-smoothing: antialiased;
     }
-    .container {
-        background: #fff; width: 950px; border-radius: 16px; padding: 32px; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    .container { width: 780px; max-width: 100%; }
+
+    h2 { margin: 0 0 4px; color: var(--ink); font-family: 'Lora', serif; font-weight: 600; font-size: 20px; }
+    .section { margin-bottom: 40px; }
+
+    /* ===== PAGE HEADER ===== */
+    .page-header { margin-bottom: 32px; }
+    .page-header h1 {
+        font-family: 'Lora', serif; font-weight: 700; font-style: italic;
+        font-size: 34px; margin: 0 0 6px; color: var(--ink); letter-spacing: -0.2px;
     }
-    h2 { margin-top: 0; color: #1f2937; }
-    .section { margin-bottom: 32px; }
-    
-    input { padding: 10px 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 15px; outline: none; }
-    input:focus { border-color: #6366f1; }
-    button { padding: 10px 18px; border: none; border-radius: 8px; background: #4f46e5; color: white; font-size: 14px; cursor: pointer; font-weight: 500; }
-    button:hover { background: #4338ca; }
-    
-    .delete { background: #dc2626; } .delete:hover { background: #b91c1c; }
-    .edit { background: #16a34a; }
-    .graduate-btn { background: #f59e0b; color: white; } .graduate-btn:hover { background: #d97706; }
-    .revive-btn { background: #10b981; color: white; } .revive-btn:hover { background: #059669; }
+    .page-header .tally { color: var(--ink-soft); font-size: 14.5px; }
+    .page-header .tally b { color: var(--pen-blue-d); font-weight: 600; }
+
+    /* ===== FORM CHUNG ===== */
+    input {
+        padding: 10px 12px; border-radius: 3px; border: 1px solid var(--card-line);
+        background: var(--card); font-size: 15px; outline: none; color: var(--ink);
+        font-family: inherit;
+    }
+    input::placeholder { color: var(--ink-faint); }
+    input:focus { border-color: var(--pen-blue); box-shadow: 0 0 0 3px var(--pen-blue-tint); }
+
+    button {
+        padding: 10px 18px; border: none; border-radius: 3px; background: var(--pen-blue);
+        color: white; font-size: 14px; cursor: pointer; font-weight: 600; font-family: inherit;
+        transition: background 0.15s ease, transform 0.1s ease;
+    }
+    button:hover { background: var(--pen-blue-d); }
+    button:active { transform: translateY(1px); }
+
+    .delete { background: transparent; color: var(--red-pen); border: 1px solid var(--red-pen-tint); }
+    .delete:hover { background: var(--red-pen-tint); color: var(--red-pen-d); }
+    .edit { background: var(--pen-blue); }
+    .edit:hover { background: var(--pen-blue-d); }
+    .graduate-btn { background: var(--ochre-tint); color: var(--ochre-d); }
+    .graduate-btn:hover { background: #e8d3a8; }
+    .revive-btn { background: var(--sage-tint); color: var(--sage-d); }
+    .revive-btn:hover { background: #cbdfc9; }
+
+    /* ===== Ô THÊM TỪ MỚI (intake) ===== */
+    .intake-card {
+        display: flex; gap: 10px; align-items: center;
+        background: var(--card); border: 1px solid var(--card-line); border-radius: var(--radius-card);
+        padding: 16px 18px;
+    }
+    .intake-card input { flex: 1; width: auto; border: none; border-bottom: 1px solid var(--card-line); border-radius: 0; padding: 6px 2px; font-size: 16px; }
+    .intake-card input:focus { box-shadow: none; border-bottom-color: var(--pen-blue); }
+
+    .intake-message { margin-top: 10px; font-size: 13.5px; padding: 8px 12px; border-radius: 3px; }
+    .intake-message.ok   { background: var(--sage-tint); color: var(--sage-d); }
+    .intake-message.warn { background: var(--ochre-tint); color: var(--ochre-d); }
+
+    /* ===== NÚT NGHE PHÁT ÂM (Web Speech API) ===== */
+    .listen-btn {
+        background: transparent; border: 1px solid var(--card-line); color: var(--pen-blue);
+        padding: 2px 7px; font-size: 12px; border-radius: 20px; line-height: 1.6;
+    }
+    .listen-btn:hover { background: var(--pen-blue-tint); border-color: var(--pen-blue); }
+    .listen-btn-lg { font-size: 17px; padding: 6px 11px; }
+
+    /* ===== NHÃN LOẠI TỪ (danh từ / động từ / tính từ...) ===== */
+    .pos-badge {
+        display: inline-block; font-size: 11px; font-weight: 600; color: var(--pen-blue-d);
+        background: var(--pen-blue-tint); padding: 1px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .quiz-ipa-row { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 22px; }
+    #quiz-pos { display: none; }
 
     /* ===== BẢNG TỪ VỰNG ===== */
-    .table-header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .search-input { width: 250px; padding: 8px 12px; font-size: 14px; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-    th, td { padding: 10px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 14px; }
-    .pagination-controls { display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 12px; }
-    .pagination-controls button { background: #f3f4f6; color: #374151; padding: 6px 14px; font-size: 13px; }
-    .page-info { font-size: 14px; color: #4b5563; font-weight: 500; }
+    .table-header-actions { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+    .search-input { width: 220px; padding: 8px 4px; font-size: 14px; border: none; border-bottom: 1px solid var(--card-line); border-radius: 0; background: transparent; }
+    .search-input:focus { box-shadow: none; border-bottom-color: var(--pen-blue); }
+
+    .list-card { background: var(--card); border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 16px; border-bottom: 1px solid var(--card-line); text-align: left; font-size: 14px; }
+    thead th { font-weight: 600; color: var(--ink-soft); font-size: 12.5px; border-bottom: 1px solid var(--ink-faint); }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: rgba(47, 85, 96, 0.035); }
+
+    .pagination-controls { display: flex; justify-content: center; align-items: center; gap: 18px; margin-top: 14px; }
+    .pagination-controls button { background: transparent; color: var(--pen-blue-d); padding: 6px 4px; font-size: 13px; font-weight: 600; }
+    .pagination-controls button:hover { background: transparent; text-decoration: underline; }
+    .page-info { font-size: 13px; color: var(--ink-soft); }
 
     .word-cell { display: flex; flex-direction: column; }
-    .ipa-text { font-size: 11px; color: #6b7280; font-family: monospace; margin-bottom: 2px; }
-    .en-text { font-weight: 600; color: #111827; }
+    .ipa-text { font-size: 11.5px; color: var(--ink-faint); font-family: monospace; margin-bottom: 2px; }
+    .en-text { font-weight: 600; color: var(--ink); font-family: 'Lora', serif; font-size: 15.5px; }
 
-    /* ===== KHU VỰC LUYỆN TẬP ===== */
-    .quiz-box { background: #f9fafb; padding: 28px; border-radius: 14px; text-align: center; border: 2px dashed #e5e7eb; }
-    .quiz-control-row { display: flex; justify-content: center; gap: 24px; margin-bottom: 20px; border-bottom: 1px solid #e5e7eb; padding-bottom: 14px; }
-    .control-group { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-    .control-label { font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
-    
-    .mode-btn { background: #e5e7eb; color: #4b5563; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 20px; transition: 0.2s; border: none; cursor: pointer; }
-    .mode-btn.active { background: #4f46e5; color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2); }
-    
-    .quiz-word-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 15px; }
-    .quiz-ipa { font-size: 14px; color: #4f46e5; font-family: monospace; min-height: 18px; }
-    .quiz-word { font-size: 28px; font-weight: 700; color: #111827; margin-top: 2px; }
-    
-    .letter-hint-box { font-family: monospace; font-size: 20px; color: #4f46e5; letter-spacing: 4px; margin: 10px 0 15px 0; font-weight: bold; min-height: 24px; }
-    .hint-btn { background: #6b7280; padding: 4px 10px; font-size: 11px; margin-bottom: 12px; border-radius: 6px; }
-    .hint-btn:hover { background: #4b5563; }
+    /* ===== KHU VỰC LUYỆN TẬP — thẻ chính (hero) ===== */
+    .quiz-box {
+        position: relative;
+        background: var(--card); padding: 36px 32px 30px; border-radius: var(--radius-card);
+        text-align: center; border: 1px solid var(--card-line); box-shadow: var(--shadow);
+    }
+    /* góc gấp nhỏ — chi tiết thẻ giấy vật lý */
+    .quiz-box::after {
+        content: ""; position: absolute; top: 0; right: 0; width: 26px; height: 26px;
+        background: linear-gradient(135deg, transparent 50%, var(--paper) 50%);
+        border-bottom-left-radius: 3px;
+    }
 
-    .desc-box { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 6px; padding: 12px; margin: 15px auto; width: 85%; text-align: left; font-size: 13.5px; color: #1e40af; }
+    .quiz-control-row { display: flex; justify-content: center; gap: 32px; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--card-line); flex-wrap: wrap; }
+    .control-group { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .control-label { font-size: 12.5px; font-weight: 500; color: var(--ink-soft); }
+
+    .mode-btn { background: transparent; color: var(--ink-soft); padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 20px; transition: 0.15s; border: 1px solid var(--card-line); cursor: pointer; }
+    .mode-btn:hover { background: var(--pen-blue-tint); }
+    .mode-btn.active { background: var(--pen-blue); color: white; border-color: var(--pen-blue); }
+
+    .quiz-word-container { display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; }
+    .quiz-ipa { font-size: 14px; color: var(--pen-blue); font-family: monospace; min-height: 18px; }
+    .quiz-word { font-family: 'Lora', serif; font-size: 34px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+
+    .letter-hint-box { font-family: monospace; font-size: 20px; color: var(--pen-blue); letter-spacing: 4px; margin: 10px 0 15px 0; font-weight: bold; min-height: 24px; }
+    .hint-btn { background: transparent; color: var(--ink-soft); border: 1px solid var(--card-line); padding: 4px 10px; font-size: 11.5px; margin-bottom: 12px; border-radius: 6px; font-weight: 500; }
+    .hint-btn:hover { background: var(--paper); color: var(--ink); }
+
+    .desc-box { background: var(--pen-blue-tint); border-left: 3px solid var(--pen-blue); border-radius: 3px; padding: 12px 14px; margin: 16px auto; width: 88%; text-align: left; font-size: 13.5px; color: var(--pen-blue-d); }
 
     .quiz-input { width: 60%; font-size: 18px; text-align: center; margin-bottom: 12px; }
-    .mcq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 80%; margin: 0 auto 10px auto; }
-    .mcq-btn { background: #fff; border: 2px solid #6366f1; color: #4f46e5; padding: 14px; font-size: 16px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: 0.2s; }
-    .mcq-btn:hover { background: #e0e7ff; }
+    .quiz-btn { margin-top: 4px; }
+    .mcq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 84%; margin: 0 auto 10px auto; }
+    .mcq-btn { background: var(--card); border: 1px solid var(--card-line); color: var(--ink); padding: 14px; font-size: 15.5px; font-weight: 600; border-radius: 4px; cursor: pointer; transition: 0.15s; font-family: 'Be Vietnam Pro', sans-serif; }
+    .mcq-btn:hover:not(:disabled) { background: var(--pen-blue-tint); border-color: var(--pen-blue); }
+    .mcq-btn:disabled { cursor: default; opacity: 0.6; }
 
-    .result { margin-top: 14px; font-size: 18px; font-weight: 600; min-height: 24px; margin-bottom: 10px; }
-    .correct { color: #16a34a; } .wrong { color: #dc2626; }
-    .hint { margin-top: 12px; color: #6b7280; font-size: 13px; font-style: italic; transition: all 0.3s; }
-    
-    .stage-badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; margin-bottom: 10px; }
-    .stage-1 { background: #dbeafe; color: #1e3a8a; }
-    .stage-2 { background: #fce7f3; color: #9d174d; }
-    .stage-graduated { background: #fef3c7; color: #92400e; }
+    .result { margin-top: 16px; font-size: 17px; font-weight: 600; min-height: 24px; margin-bottom: 8px; }
+    .correct { color: var(--sage-d); } .wrong { color: var(--red-pen-d); }
+    .hint { margin-top: 12px; color: var(--ink-soft); font-size: 13px; font-style: italic; transition: all 0.3s; }
+
+    .stage-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-bottom: 12px; }
+    .stage-1 { background: var(--pen-blue-tint); color: var(--pen-blue-d); }
+    .stage-2 { background: var(--red-pen-tint); color: var(--red-pen-d); }
+    .stage-graduated { background: var(--ochre-tint); color: var(--ochre-d); }
+
+    #quiz-synonyms { display: none; font-size: 13.5px; color: var(--sage-d); background: var(--sage-tint); padding: 4px 10px; border-radius: 8px; font-weight: 600; }
+    #desc-example-row { font-style: italic; color: var(--ink-soft); display: block; margin-top: 4px; }
 
     /* ===== NÚT ĐÁNH GIÁ SM-2 ===== */
-    .sm2-btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; font-size: 14px; }
-    .sm2-again { background: #dc2626; } .sm2-again:hover { background: #b91c1c; }
-    .sm2-hard { background: #ea580c; } .sm2-hard:hover { background: #c2410c; }
-    .sm2-good { background: #16a34a; } .sm2-good:hover { background: #15803d; }
-    .sm2-easy { background: #2563eb; } .sm2-easy:hover { background: #1d4ed8; }
+    #sm2-rating-area { margin-top: 22px; }
+    #sm2-rating-area p { font-size: 14.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 12px; }
+    .sm2-btn { padding: 10px 18px; border: none; border-radius: 3px; font-weight: 700; cursor: pointer; color: white; transition: 0.15s; font-size: 13.5px; }
+    .sm2-again { background: var(--red-pen); } .sm2-again:hover { background: var(--red-pen-d); }
+    .sm2-hard  { background: var(--ochre); }   .sm2-hard:hover  { background: var(--ochre-d); }
+    .sm2-good  { background: var(--sage); }    .sm2-good:hover  { background: var(--sage-d); }
+    .sm2-easy  { background: var(--pen-blue); }.sm2-easy:hover  { background: var(--pen-blue-d); }
+
+    /* ===== KHO TỪ TỐT NGHIỆP ===== */
+    .graduated-section { margin-top: 8px; border-top: 1px solid var(--card-line); padding-top: 28px; }
+    .graduated-section tbody tr { background: transparent; }
+    .empty-row { text-align: center; color: var(--ink-faint); padding: 24px !important; font-style: italic; }
+
+    @media (max-width: 640px) {
+        .container { width: 100%; }
+        .quiz-control-row { gap: 16px; }
+        .mcq-grid, .desc-box { width: 100%; }
+        .quiz-input { width: 90%; }
+        .intake-card { flex-direction: column; align-items: stretch; }
+    }
 </style>
 </head>
 
 <body>
 <div class="container">
 
+    <div class="page-header">
+        <h1>Sổ tay từ vựng</h1>
+        <div class="tally"><b>{{ vocab|length }}</b> từ đang học · <b>{{ graduated|length }}</b> đã tốt nghiệp</div>
+    </div>
+
     <div class="section">
-        <form method="post">
-            <input name="word" placeholder="Nhập từ tiếng Anh..." required autocomplete="off" style="width: 300px;">
+        <form method="post" class="intake-card">
+            <input name="word" placeholder="Nhập một từ tiếng Anh để thêm vào sổ..." required autocomplete="off">
             <button type="submit">Thêm vào kho</button>
         </form>
+        {% if add_message %}
+        <div class="intake-message {{ add_message[0] }}">{{ add_message[1] }}</div>
+        {% endif %}
     </div>
 
     <div class="section">
         <div class="table-header-actions">
-            <h2>🌱 Danh sách từ đang học ({{ vocab|length }} từ)</h2>
-            <input id="search-box" class="search-input" placeholder="🔍 Tìm kiếm từ..." oninput="onSearchChange()">
+            <h2>🌱 Đang học ({{ vocab|length }} từ)</h2>
+            <input id="search-box" class="search-input" placeholder="Tìm kiếm từ..." oninput="onSearchChange()">
         </div>
+        <div class="list-card">
         <table>
             <thead>
                 <tr>
@@ -113,7 +250,11 @@
                     <td>
                         <div class="word-cell">
                             <span class="ipa-text">{% if w.ipa %}{{ w.ipa }}{% else %}/.../{% endif %}</span>
-                            <span class="en-text">{{ w.en }}</span>
+                            <span style="display:flex; align-items:center; gap:6px; flex-wrap: wrap;">
+                                <span class="en-text">{{ w.en }}</span>
+                                {% if w.word_type %}<span class="pos-badge">{{ w.word_type }}</span>{% endif %}
+                                <button type="button" class="listen-btn" onclick='speakWord({{ w.en|tojson }})' title="Nghe phát âm">🔊</button>
+                            </span>
                         </div>
                     </td>
                     <td>
@@ -136,6 +277,7 @@
                 {% endfor %}
             </tbody>
         </table>
+        </div>
         <div class="pagination-controls">
             <button type="button" onclick="prevPage()">Trước</button>
             <span id="page-info" class="page-info">Trang 1 / 1</span>
@@ -165,16 +307,20 @@
 
         <div class="quiz-word-container">
             <div id="quiz-stage" class="stage-badge"></div>
-            <div id="quiz-ipa" class="quiz-ipa"></div>
+            <div class="quiz-ipa-row">
+                <div id="quiz-ipa" class="quiz-ipa"></div>
+                <span id="quiz-pos" class="pos-badge"></span>
+            </div>
             <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 2px;">
                 <div class="quiz-word" id="word">---</div>
-                <div id="quiz-synonyms" style="display: none; font-size: 14px; color: #059669; background: #d1fae5; padding: 4px 10px; border-radius: 8px; font-weight: bold; border: 1px dashed #059669;" title="Tự động tra API"></div>
+                <button type="button" id="listen-btn" class="listen-btn listen-btn-lg" onclick="speakCurrentWord()" title="Nghe phát âm">🔊</button>
+                <div id="quiz-synonyms" title="Tự động tra API"></div>
             </div>
         </div>
 
         <div id="desc-area" class="desc-box" style="display: none;">
             <b>Mô tả (Context):</b> <span id="desc-definition"></span><br>
-            <span id="desc-example-row" style="font-style: italic; color: #4b5563; display:block; margin-top:4px;">
+            <span id="desc-example-row">
                 Ví dụ: <span id="desc-example"></span>
             </span>
         </div>
@@ -194,8 +340,8 @@
             <div class="mcq-grid" id="mcq-options"></div>
         </div>
 
-        <div id="sm2-rating-area" style="display: none; margin-top: 20px;">
-            <p style="font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 12px;">Đánh giá mức độ ghi nhớ của bạn:</p>
+        <div id="sm2-rating-area" style="display: none;">
+            <p>Đánh giá mức độ ghi nhớ của bạn:</p>
             <div style="display: flex; justify-content: center; gap: 12px;">
                 <button class="sm2-btn sm2-again" onclick="submitSM2(0)">Học lại</button>
                 <button class="sm2-btn sm2-hard" onclick="submitSM2(1)">Khó</button>
@@ -208,8 +354,9 @@
         <div class="hint" id="quiz-hint"></div>
     </div>
 
-    <div class="section" style="margin-top: 50px; border-top: 2px solid #e5e7eb; padding-top: 20px;">
-        <h2>🎓 Kho từ vựng đã tốt nghiệp ({{ graduated|length }} từ)</h2>
+    <div class="section graduated-section">
+        <h2 style="margin-bottom: 14px;">🎓 Kho từ vựng đã tốt nghiệp ({{ graduated|length }} từ)</h2>
+        <div class="list-card">
         <table>
             <thead>
                 <tr>
@@ -221,10 +368,10 @@
             </thead>
             <tbody>
                 {% for w in graduated %}
-                <tr style="background-color: #fafafa;">
-                    <td><b>{{ w.en }}</b> <span style="color:#6b7280; font-size:12px;">{{ w.ipa }}</span></td>
+                <tr>
+                    <td><span class="en-text">{{ w.en }}</span> {% if w.word_type %}<span class="pos-badge">{{ w.word_type }}</span>{% endif %} <button type="button" class="listen-btn" onclick='speakWord({{ w.en|tojson }})' title="Nghe phát âm">🔊</button> <span class="ipa-text">{{ w.ipa }}</span></td>
                     <td>{{ w.vi }}</td>
-                    <td><span style="color: #16a34a;">✔ {{ w.correct }}</span> - <span style="color: #dc2626;">❌ {{ w.wrong }}</span></td>
+                    <td><span class="correct">✔ {{ w.correct }}</span> &nbsp;·&nbsp; <span class="wrong">❌ {{ w.wrong }}</span></td>
                     <td>
                         <form action="/revive/{{ w.id }}" method="post" style="display:inline;">
                             <button class="revive-btn" type="submit" style="padding: 6px 12px; font-size: 12px;">↩️ Học lại</button>
@@ -236,10 +383,11 @@
                 </tr>
                 {% endfor %}
                 {% if not graduated %}
-                <tr><td colspan="4" style="text-align: center; color: #9ca3af; padding: 20px;">Chưa có từ nào tốt nghiệp.</td></tr>
+                <tr><td colspan="4" class="empty-row">Chưa có từ nào tốt nghiệp.</td></tr>
                 {% endif %}
             </tbody>
         </table>
+        </div>
     </div>
 
 </div>
@@ -252,6 +400,18 @@
     
     function shuffleArray(array) { return array.sort(() => Math.random() - 0.5); }
 
+    // ===== NGHE PHÁT ÂM (Web Speech API — có sẵn trong trình duyệt, không cần gọi API ngoài) =====
+    function speakWord(text, lang) {
+        if (!text || !('speechSynthesis' in window)) return;
+        window.speechSynthesis.cancel(); // huỷ câu đang đọc dở (nếu có) trước khi đọc câu mới
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = lang || 'en-US';
+        window.speechSynthesis.speak(utter);
+    }
+    function speakCurrentWord() {
+        if (current) speakWord(current.en, 'en-US'); // luôn đọc từ tiếng Anh, dù đang hỏi chiều nào
+    }
+
     const quizzes = {{ quiz_data | tojson }};
     let used = [];
     let current = null;
@@ -262,6 +422,7 @@
 
     const wordEl = document.getElementById("word");
     const ipaEl = document.getElementById("quiz-ipa");
+    const posEl = document.getElementById("quiz-pos");
     const stageEl = document.getElementById("quiz-stage");
     const hintEl = document.getElementById("quiz-hint");
     const typingArea = document.getElementById("quiz-typing-area");
@@ -331,6 +492,7 @@
         hintEl.style.fontWeight = "normal";
 
         if (synEl) synEl.style.display = "none";
+        if (posEl) posEl.style.display = "none";
 
         let targetTarget = (quizMode === 'active') ? 0 : 1;
         const remaining = quizzes.filter(q => !used.includes(q.id) && q.is_graduated === targetTarget);
@@ -338,6 +500,7 @@
         if (remaining.length === 0) {
             wordEl.innerText = "🎉 Đã hoàn thành bộ từ này!";
             ipaEl.innerText = ""; stageEl.style.display = "none";
+            if (posEl) posEl.style.display = "none";
             typingArea.style.display = "none"; mcqArea.style.display = "none";
             descArea.style.display = "none"; hintCharContainer.style.display = "none";
             return;
@@ -349,6 +512,14 @@
         if (quizDirection === 'en-vi') {
             wordEl.innerText = current.en;
             ipaEl.innerText = current.ipa ? current.ipa : "";
+            if (posEl) {
+                if (current.word_type) {
+                    posEl.innerText = current.word_type;
+                    posEl.style.display = "inline-block";
+                } else {
+                    posEl.style.display = "none";
+                }
+            }
             
             fetch(`https://api.datamuse.com/words?rel_syn=${current.en}&max=3`)
                 .then(res => res.json())
@@ -364,6 +535,7 @@
         } else {
             wordEl.innerText = current.vi;
             ipaEl.innerText = "";
+            if (posEl) posEl.style.display = "none";
             if (synEl) synEl.style.display = "none"; 
         }
 
@@ -429,7 +601,7 @@
 
     async function checkAnswer(userAnswer) {
         if (!userAnswer || !userAnswer.trim()) { 
-            result.innerText = "⚠️ Nhập đáp án trước đã ông ơi!"; 
+            result.innerText = "⚠️ Bạn chưa nhập đáp án."; 
             return; 
         }
         userAnswer = userAnswer.trim();

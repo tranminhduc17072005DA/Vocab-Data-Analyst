@@ -27,7 +27,7 @@ with st.sidebar:
     """)
 
 # 2. ADVANCED ETL PIPELINE
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=30)  # 10s cũ hơi thấp -> query lại DB liên tục dù data không đổi
 def load_and_transform_data():
     try:
         conn = sqlite3.connect("vocab.db")
@@ -101,6 +101,63 @@ def load_and_transform_data():
     return df_vocab, df_logs
 
 df_vocab, df_logs = load_and_transform_data()
+
+
+# --- CÁC HÀM ML/NLP ĐƯỢC CACHE ---
+# Trước đây phần train RandomForest (tab 3) và TF-IDF + KMeans + PCA (tab 4)
+# nằm trực tiếp trong "with tab3:" / "with tab4:", nên MỖI LẦN Streamlit
+# rerun script (đổi tab, gõ vào 1 ô input, tương tác widget bất kỳ...) đều
+# train lại từ đầu, dù df_vocab không hề đổi. Bọc trong @st.cache_data để
+# chỉ tính lại khi nội dung df_vocab thật sự thay đổi.
+
+@st.cache_data
+def train_prediction_model(ml_df: pd.DataFrame):
+    """Train RandomForest dự đoán từ có nguy cơ bị quên. Trả về None nếu
+    chưa đủ dữ liệu hoặc nhãn không đủ đa dạng để train."""
+    if len(ml_df) < 10:
+        return None
+
+    X = ml_df[['word_length', 'total_attempts', 'typos', 'days_since_last_review']]
+    y = (ml_df['adjusted_error_rate'] > 0.3).astype(int)
+
+    if len(y.unique()) <= 1:
+        return None
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+    model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
+    model.fit(X_train, y_train)
+    acc = accuracy_score(y_test, model.predict(X_test))
+
+    importances = pd.DataFrame({
+        'Feature': ['Độ dài từ', 'Tổng lượt tương tác', 'Lỗi thao tác (Slips)', 'Khoảng cách thời gian'],
+        'Importance': model.feature_importances_
+    }).sort_values('Importance')
+
+    return acc, importances
+
+
+@st.cache_data
+def compute_nlp_clusters(df_vocab: pd.DataFrame):
+    """Trích xuất TF-IDF, phân cụm KMeans, giảm chiều PCA. Trả về None nếu
+    chưa đủ dữ liệu để phân cụm có ý nghĩa."""
+    if len(df_vocab) <= 5:
+        return None
+
+    tfidf = TfidfVectorizer(analyzer='char', ngram_range=(2, 3))
+    X_text = tfidf.fit_transform(df_vocab['en'])
+
+    num_clusters = min(4, len(df_vocab) // 3)
+    kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init='auto')
+    clusters = kmeans.fit_predict(X_text)
+
+    pca = PCA(n_components=2, random_state=42)
+    components = pca.fit_transform(X_text.toarray())
+
+    result = df_vocab.copy()
+    result['nlp_cluster'] = [f"Cụm {c+1}" for c in clusters]
+    result['PCA_1'] = components[:, 0]
+    result['PCA_2'] = components[:, 1]
+    return result
 
 # 3. MAIN DASHBOARD LAYOUT
 st.title("Vocabulary Analytics Dashboard")
@@ -206,59 +263,38 @@ with tab3:
     st.markdown("*Áp dụng thuật toán **Random Forest Classifier** kết hợp biến đổi thời gian nhằm dự đoán khả năng nhớ từ, hỗ trợ tối ưu hóa chu kỳ lặp lại (Spaced Repetition).*")
     
     ml_df = df_vocab[df_vocab['total_attempts'] >= 1].copy()
-    
+    ml_result = train_prediction_model(ml_df)
+
     if len(ml_df) < 10:
         st.warning("Yêu cầu kích thước mẫu tối thiểu (n ≥ 10) để tiến hành huấn luyện mô hình.")
+    elif ml_result is None:
+        st.info("Tập dữ liệu huấn luyện (Training set) chưa đạt đủ độ phân tán phương sai để thiết lập mô hình.")
     else:
-        X = ml_df[['word_length', 'total_attempts', 'typos', 'days_since_last_review']]
-        y = (ml_df['adjusted_error_rate'] > 0.3).astype(int)
-        
-        if len(y.unique()) > 1:
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
-            model = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
-            model.fit(X_train, y_train)
-            
-            acc = accuracy_score(y_test, model.predict(X_test))
-            
-            col_ml1, col_ml2 = st.columns([1, 2])
-            with col_ml1:
-                st.metric("Độ chính xác của Mô hình (Accuracy)", f"{acc*100:.1f}%")
-                
-            with col_ml2:
-                importances = pd.DataFrame({'Feature': ['Độ dài từ', 'Tổng lượt tương tác', 'Lỗi thao tác (Slips)', 'Khoảng cách thời gian'], 
-                                            'Importance': model.feature_importances_}).sort_values('Importance')
-                fig_imp = px.bar(importances, x='Importance', y='Feature', orientation='h', title="Mức độ đóng góp của các đặc trưng (Feature Importance)")
-                fig_imp.update_layout(margin=dict(t=30, b=0, l=0, r=0))
-                st.plotly_chart(fig_imp, use_container_width=True)
-        else:
-            st.info("Tập dữ liệu huấn luyện (Training set) chưa đạt đủ độ phân tán phương sai để thiết lập mô hình.")
+        acc, importances = ml_result
+        col_ml1, col_ml2 = st.columns([1, 2])
+        with col_ml1:
+            st.metric("Độ chính xác của Mô hình (Accuracy)", f"{acc*100:.1f}%")
+
+        with col_ml2:
+            fig_imp = px.bar(importances, x='Importance', y='Feature', orientation='h', title="Mức độ đóng góp của các đặc trưng (Feature Importance)")
+            fig_imp.update_layout(margin=dict(t=30, b=0, l=0, r=0))
+            st.plotly_chart(fig_imp, use_container_width=True)
 
 # --- TAB 4: NLP CLUSTERING ---
 with tab4:
     st.subheader("Phân tích Cụm (Clustering): Không gian Hình thái Từ vựng")
     st.markdown("*Sử dụng phương pháp trích xuất đặc trưng **TF-IDF (Character N-grams)** kết hợp giảm chiều dữ liệu **PCA** nhằm phân cụm các từ vựng có cấu trúc tương đồng.*")
     
-    if len(df_vocab) > 5:
-        tfidf = TfidfVectorizer(analyzer='char', ngram_range=(2, 3))
-        X_text = tfidf.fit_transform(df_vocab['en'])
-        
-        num_clusters = min(4, len(df_vocab) // 3)
-        kmeans = KMeans(n_clusters=num_clusters, random_state=42, n_init='auto')
-        clusters = kmeans.fit_predict(X_text)
-        df_vocab['nlp_cluster'] = [f"Cụm {c+1}" for c in clusters]
-        
-        pca = PCA(n_components=2, random_state=42)
-        components = pca.fit_transform(X_text.toarray())
-        df_vocab['PCA_1'] = components[:, 0]
-        df_vocab['PCA_2'] = components[:, 1]
-        
-        fig_scatter = px.scatter(df_vocab, x='PCA_1', y='PCA_2', color='nlp_cluster', hover_name='en',
+    clustered_df = compute_nlp_clusters(df_vocab)
+
+    if clustered_df is not None:
+        fig_scatter = px.scatter(clustered_df, x='PCA_1', y='PCA_2', color='nlp_cluster', hover_name='en',
                                  title="Bản đồ 2D Không gian Vector Từ vựng", size='word_length',
                                  labels={'PCA_1': 'Thành phần chính 1 (PC1)', 'PCA_2': 'Thành phần chính 2 (PC2)', 'nlp_cluster': 'Cụm phân bổ'})
         st.plotly_chart(fig_scatter, use_container_width=True)
         
         with st.expander("Bảng Dữ liệu Trực quan theo Cụm (Data Table)"):
-            display_df = df_vocab[['en', 'vi', 'nlp_cluster']].sort_values('nlp_cluster')
+            display_df = clustered_df[['en', 'vi', 'nlp_cluster']].sort_values('nlp_cluster')
             display_df.columns = ['Từ vựng', 'Ngữ nghĩa', 'Cụm NLP']
             st.dataframe(display_df, use_container_width=True, hide_index=True)
     else:

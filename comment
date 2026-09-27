@@ -1,5 +1,0 @@
-pip install streamlit pandas plotly scikit-learn
-python -m venv venv  
-venv\Scripts\activate
-streamlit run dashboard.py
-python app.py
